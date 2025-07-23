@@ -1,0 +1,8 @@
+using UnityEngine;
+
+public class RegistroGrupo
+{
+    //	Nombre	completo:	Sergio Cardenas Perdomo
+    //	Fecha:	23/07/2025	
+    //	Hora:	02:26 P.M
+}
