@@ -7,4 +7,5 @@ public class RegistroGrupo
     //	Hora:	02:41 P.M
 
     // Nombre : Juan Pablo Bohorquez
+    // Fecha: 24/07/2025
 }
