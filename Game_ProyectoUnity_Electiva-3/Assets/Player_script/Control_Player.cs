@@ -1,36 +1,40 @@
-using UnityEngine;
+Ôªøusing UnityEngine;
 using SimpleInputNamespace;
 
 public class Control_Player : MonoBehaviour
 {
-    [Header("ConfiguraciÛn del Jugador")]
+    [Header("Configuraci√≥n del Jugador")]
     public CharacterController controlador;
-    public float Velocidad = 5f;
+    public float VelocidadNormal = 5f;
     public float gravedad = -9.81f;
     public float alturaSalto = 1f;
 
-    [Header("DetecciÛn de Suelo")]
-
+    [Header("Detecci√≥n de Suelo")]
     public Transform EnelPiso;
     public float distanciaPiso;
     public LayerMask MascaraPiso;
 
+    public float velocidadActual; // ‚Üê controlada por Player_Run
     Vector3 velocidadabajo;
     bool EstaenelPiso;
 
+    private void Start()
+    {
+        velocidadActual = VelocidadNormal;
+    }
+
     private void Update()
     {
-        // Comprobar si est· en el suelo
+        // Comprobar si est√° en el suelo
         EstaenelPiso = Physics.CheckSphere(EnelPiso.position, distanciaPiso, MascaraPiso);
         if (EstaenelPiso && velocidadabajo.y < 0)
         {
-            velocidadabajo.y = -2f;  // Mantiene el personaje pegado al suelo
+            velocidadabajo.y = -2f;
         }
 
-        // Movimiento horizontal - USAR SOLO LOS EJES EST¡NDAR DE MOVIMIENTO
+        // Movimiento horizontal - usar los ejes est√°ndar
         float x = SimpleInput.GetAxis("Horizontal");
         float z = SimpleInput.GetAxis("Vertical");
-
         Vector3 mover = transform.right * x + transform.forward * z;
 
         // Salto
@@ -42,8 +46,8 @@ public class Control_Player : MonoBehaviour
         // Aplicar gravedad
         velocidadabajo.y += gravedad * Time.deltaTime;
 
-        // Combinar ambos movimientos
-        Vector3 movimientoTotal = (mover * Velocidad) + velocidadabajo;
+        // CAMBIO IMPORTANTE: Usar velocidadActual en lugar de VelocidadNormal
+        Vector3 movimientoTotal = (mover * velocidadActual) + velocidadabajo;
         controlador.Move(movimientoTotal * Time.deltaTime);
     }
 }
