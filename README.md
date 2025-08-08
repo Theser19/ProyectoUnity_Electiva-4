@@ -1,4 +1,4 @@
-# ProyectoUnity_Electiva-3
+# ProyectoUnity_Electiva-4
 Repositorio para la electiva desarrollo de videojuegos para dispositivos moviles.
 
 Grupo 3 Conformado por:
