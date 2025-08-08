@@ -13,4 +13,6 @@ public class RegistroGrupo
     // Nombre : David Santiago Paez
     // Fecha: 26/07/2025
     // Hora: 11:47 P.M
+
+    // Se termina la guia 1
 }
