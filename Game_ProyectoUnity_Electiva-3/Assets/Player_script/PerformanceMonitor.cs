@@ -65,7 +65,7 @@ public class PerformanceMonitor : MonoBehaviour
     void CreateUI()
     {
         // Create Canvas if it doesn't exist
-        Canvas canvas = FindObjectOfType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             GameObject canvasGO = new GameObject("Performance Canvas");
@@ -215,7 +215,7 @@ public class PerformanceMonitor : MonoBehaviour
         {
             stringBuilder.AppendLine($"Resolution: {Screen.width} x {Screen.height}");
             stringBuilder.AppendLine($"DPI: {Screen.dpi}");
-            stringBuilder.AppendLine($"Refresh Rate: {Screen.currentResolution.refreshRate} Hz");
+            stringBuilder.AppendLine($"Refresh Rate: {Screen.currentResolution.refreshRateRatio} Hz");
             stringBuilder.AppendLine();
         }
 
