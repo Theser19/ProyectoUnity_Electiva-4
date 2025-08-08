@@ -11,6 +11,8 @@ public class AgarrarObjetoUI : MonoBehaviour
     public Color colorNormal = Color.white; // Color cuando no tiene objeto
     public Color colorConObjeto = Color.green; // Color cuando tiene objeto agarrado
     public Color colorObjetoDisponible = Color.yellow; // Color cuando hay objeto disponible para tomar
+    public Color colorNotaDisponible = Color.blue; // Color cuando hay nota disponible
+    public Color colorPuertaDisponible = Color.orange; // Color cuando hay puerta disponible
 
     [Header("Efectos Adicionales")]
     public bool usarEscala = true;
@@ -32,8 +34,9 @@ public class AgarrarObjetoUI : MonoBehaviour
 
     private Vector3 escalaOriginal;
     private Color colorOriginal;
-    private bool estadoAnterior = false;
-    private bool objetoDisponibleAnterior = false;
+    private string estadoAnterior = "";
+    private Activar_nota notaCercana;
+    private Puerta puertaCercana;
 
     void Start()
     {
@@ -57,21 +60,31 @@ public class AgarrarObjetoUI : MonoBehaviour
     {
         if (controladorAgarrar == null) return;
 
-        // Verificar estados actuales
-        bool tieneObjeto = controladorAgarrar.HasObjectPickedUp();
-        bool hayObjetoDisponible = TieneObjetoDisponible();
+        DetectarInteractuables();
 
-        // Verificar si cambió algún estado
-        if (tieneObjeto != estadoAnterior || hayObjetoDisponible != objetoDisponibleAnterior)
+        string estadoActual = GetEstadoActual();
+
+        // Verificar si cambió el estado
+        if (estadoActual != estadoAnterior)
         {
             ActualizarEstadoVisual();
-            estadoAnterior = tieneObjeto;
-            objetoDisponibleAnterior = hayObjetoDisponible;
+            estadoAnterior = estadoActual;
+
+            // Vibración en móvil
+#if UNITY_ANDROID || UNITY_IOS
+            if (estadoAnterior != "Normal")
+            {
+                Handheld.Vibrate();
+            }
+#endif
         }
 
         // Aplicar efectos de pulso
         if (usarEfectoPulso)
         {
+            bool tieneObjeto = controladorAgarrar.HasObjectPickedUp();
+            bool hayObjetoDisponible = controladorAgarrar.HasObjectAvailable();
+
             if (pulsoConObjeto && tieneObjeto)
             {
                 AplicarEfectoPulso(colorConObjeto, escalaConObjeto, alfaConObjeto);
@@ -83,44 +96,95 @@ public class AgarrarObjetoUI : MonoBehaviour
         }
     }
 
+    void DetectarInteractuables()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null) return;
+
+        // Detectar nota cercana
+        notaCercana = null;
+        Activar_nota[] notas = FindObjectsByType<Activar_nota>(FindObjectsSortMode.None);
+        foreach (var nota in notas)
+        {
+            if (nota.activar)
+            {
+                notaCercana = nota;
+                break;
+            }
+        }
+
+        // Detectar puerta cercana - Por distancia
+        puertaCercana = null;
+        Puerta[] puertas = FindObjectsByType<Puerta>(FindObjectsSortMode.None);
+        foreach (var puerta in puertas)
+        {
+            // Calcular distancia entre jugador y puerta
+            float distancia = Vector3.Distance(player.transform.position, puerta.transform.position);
+
+            // Distancia máxima para interactuar
+            float distanciaMaxima = 3f; // 3 metros
+
+            if (distancia <= distanciaMaxima)
+            {
+                puertaCercana = puerta;
+                break;
+            }
+        }
+    }
+
     void ActualizarEstadoVisual()
     {
         if (controladorAgarrar == null || imagenBoton == null) return;
 
-        bool tieneObjeto = controladorAgarrar.HasObjectPickedUp();
-        bool hayObjetoDisponible = TieneObjetoDisponible();
+        string estado = GetEstadoActual();
 
         // Determinar color y escala según el estado
         Color nuevoColor;
         float nuevaEscala;
         float nuevoAlfa;
 
-        if (tieneObjeto)
+        switch (estado)
         {
-            // Tiene objeto agarrado
-            nuevoColor = colorConObjeto;
-            nuevaEscala = escalaConObjeto;
-            nuevoAlfa = alfaConObjeto;
-        }
-        else if (hayObjetoDisponible)
-        {
-            // Hay objeto disponible para tomar
-            nuevoColor = colorObjetoDisponible;
-            nuevaEscala = escalaObjetoDisponible;
-            nuevoAlfa = alfaObjetoDisponible;
-        }
-        else
-        {
-            // Estado normal
-            nuevoColor = colorNormal;
-            nuevaEscala = escalaNormal;
-            nuevoAlfa = alfaNormal;
+            case "Objeto agarrado":
+                nuevoColor = colorConObjeto;
+                nuevaEscala = escalaConObjeto;
+                nuevoAlfa = alfaConObjeto;
+                break;
+
+            case "Objeto disponible":
+                nuevoColor = colorObjetoDisponible;
+                nuevaEscala = escalaObjetoDisponible;
+                nuevoAlfa = alfaObjetoDisponible;
+                break;
+
+            case "Nota disponible":
+                nuevoColor = colorNotaDisponible;
+                nuevaEscala = escalaObjetoDisponible;
+                nuevoAlfa = alfaObjetoDisponible;
+                break;
+
+            case "Puerta disponible":
+                nuevoColor = colorPuertaDisponible;
+                nuevaEscala = escalaObjetoDisponible;
+                nuevoAlfa = alfaObjetoDisponible;
+                break;
+
+            default: // "Normal"
+                nuevoColor = colorNormal;
+                nuevaEscala = escalaNormal;
+                nuevoAlfa = alfaNormal;
+                break;
         }
 
         // Aplicar transparencia
         if (usarTransparencia)
         {
             nuevoColor.a = nuevoAlfa;
+        }
+        else
+        {
+            // Mantener alpha original si no se usa transparencia
+            nuevoColor.a = imagenBoton.color.a;
         }
 
         imagenBoton.color = nuevoColor;
@@ -130,14 +194,6 @@ public class AgarrarObjetoUI : MonoBehaviour
         {
             transform.localScale = escalaOriginal * nuevaEscala;
         }
-
-        // Vibración en móvil cuando cambia de estado
-#if UNITY_ANDROID || UNITY_IOS
-        if (tieneObjeto != estadoAnterior)
-        {
-            Handheld.Vibrate();
-        }
-#endif
     }
 
     void AplicarEfectoPulso(Color colorBase, float escalaBase, float alfaBase)
@@ -160,29 +216,62 @@ public class AgarrarObjetoUI : MonoBehaviour
         }
     }
 
-    // Método helper para verificar si hay objeto disponible
-    private bool TieneObjetoDisponible()
-    {
-        if (controladorAgarrar == null) return false;
-
-        // Usar el método correcto del script principal
-        return controladorAgarrar.HasObjectAvailable();
-    }
-
     // Método público para obtener el estado actual
     public string GetEstadoActual()
     {
         if (controladorAgarrar == null) return "Sin controlador";
 
-        bool tieneObjeto = controladorAgarrar.HasObjectPickedUp();
-        bool hayObjetoDisponible = TieneObjetoDisponible();
+        // Prioridad: Objeto agarrado > Objeto disponible > Nota > Puerta > Normal
+        if (controladorAgarrar.HasObjectPickedUp())
+        {
+            return "Objeto agarrado";
+        }
 
-        if (tieneObjeto)
-            return "Objeto agarrado: " + controladorAgarrar.GetPickedObject().name;
-        else if (hayObjetoDisponible)
+        if (controladorAgarrar.HasObjectAvailable())
+        {
             return "Objeto disponible";
-        else
-            return "Normal";
+        }
+
+        if (notaCercana != null)
+        {
+            return "Nota disponible";
+        }
+
+        if (puertaCercana != null)
+        {
+            return "Puerta disponible";
+        }
+
+        return "Normal";
+    }
+
+    public string GetInformacionDetallada()
+    {
+        string estado = GetEstadoActual();
+
+        switch (estado)
+        {
+            case "Objeto agarrado":
+                return "Presiona E para soltar: " + controladorAgarrar.GetPickedObject().name;
+
+            case "Objeto disponible":
+                return "Presiona E para tomar objeto";
+
+            case "Nota disponible":
+                if (notaCercana.notaActiva)
+                    return "Presiona E para cerrar nota";
+                else
+                    return "Presiona E para leer nota";
+
+            case "Puerta disponible":
+                if (puertaCercana.verabrir)
+                    return "Presiona E para cerrar puerta";
+                else
+                    return "Presiona E para abrir puerta";
+
+            default:
+                return "Explora para encontrar objetos";
+        }
     }
 
     // Método para cambiar colores desde el inspector en tiempo real
