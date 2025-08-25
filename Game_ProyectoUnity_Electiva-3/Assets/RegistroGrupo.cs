@@ -15,4 +15,6 @@ public class RegistroGrupo
     // Hora: 11:47 P.M
 
     // Se termina la guia 1
+    // Se termina la guia 2
+    // Se termina la guia 3 / taller
 }
