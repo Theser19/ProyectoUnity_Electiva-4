@@ -115,7 +115,7 @@ Material:
     - _XRMotionVectorsPass: 1
     - __dirty: 0
     m_Colors:
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.3490566, g: 0.3490566, b: 0.3490566, a: 1}
     - _Color3: {r: 0.81960785, g: 0.060962733, b: 0, a: 0}
     - _DecakEmissionColor: {r: 0, g: 0.84665537, b: 2.4117067, a: 0}
     - _DecalsColor: {r: 0.008939266, g: 0, b: 1, a: 0}

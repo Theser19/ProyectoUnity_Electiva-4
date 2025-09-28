@@ -17,4 +17,5 @@ public class RegistroGrupo
     // Se termina la guia 1
     // Se termina la guia 2
     // Se termina la guia 3 / taller
+    // Se termina la guia 4 / terrenos
 }
