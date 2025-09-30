@@ -38,36 +38,33 @@ public class CollectibleItem : MonoBehaviour
         // Evitar recolección múltiple
         if (collected)
         {
-            Debug.LogWarning($"⚠️ {nombre} ya fue recogido, ignorando...");
             return;
         }
 
         // Detectar si el jugador recogió el objeto
         if (other.CompareTag("Player"))
         {
-            Debug.Log($"🎯 Jugador tocó: {nombre}");
+            collected = true; // Marcar INMEDIATAMENTE
 
-            if (InventoryManager.Instance != null)
+            Debug.Log($"🎯 Jugador tocó: {nombre} (ID: {itemId})");
+
+            if (InventoryManager.Instance == null)
             {
-                collected = true; // Marcar como recogido ANTES de agregarlo
+                Debug.LogError("❌ No se encontró InventoryManager en la escena");
+                return;
+            }
 
-                bool added = InventoryManager.Instance.AgregarItem(itemId, nombre, imagen);
+            bool added = InventoryManager.Instance.AgregarItem(itemId, nombre, imagen);
 
-                if (added)
-                {
-                    Debug.Log($"✅ {nombre} recogido y agregado al inventario");
-                    // Destruir el objeto del mundo
-                    Destroy(gameObject);
-                }
-                else
-                {
-                    Debug.LogWarning($"⚠️ No se pudo agregar {nombre} (inventario lleno?)");
-                    collected = false; // Permitir intentarlo de nuevo
-                }
+            if (added)
+            {
+                Debug.Log($"✅ {nombre} recogido correctamente");
+                Destroy(gameObject);
             }
             else
             {
-                Debug.LogError("❌ No se encontró InventoryManager en la escena");
+                Debug.LogWarning($"⚠️ No se pudo agregar {nombre} al inventario");
+                // NO destruir el objeto si no se pudo agregar
             }
         }
     }

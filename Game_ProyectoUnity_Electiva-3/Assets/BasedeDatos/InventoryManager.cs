@@ -35,6 +35,10 @@ public class InventoryManager : MonoBehaviour
     {
         db = FirebaseFirestore.DefaultInstance;
 
+        // Limpiar items precargados del Inspector
+        items.Clear();
+        Debug.Log("🧹 Lista de items limpiada");
+
         // Suscribirse al evento de autenticación
         AuthManager.OnAuthCompleted += OnAuthenticationReady;
 
