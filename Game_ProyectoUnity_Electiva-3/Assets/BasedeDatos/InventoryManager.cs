@@ -63,8 +63,8 @@ public class InventoryManager : MonoBehaviour
     [System.Serializable]
     public class InventoryItem
     {
-        public string id;
-        public string nombre;
+        public string id;       // ID único en Firestore
+        public string nombre;   // Nombre común (ej: Llanta, Llave)
         public string imagen;
         public int cantidad;
         public Sprite sprite;
@@ -107,8 +107,6 @@ public class InventoryManager : MonoBehaviour
         if (sprite == null)
         {
             Debug.LogError($"❌ No se encontró el sprite en Resources/{spritePath}");
-            Debug.LogError($"   Buscado: Resources/{spritePath}");
-            Debug.LogError($"   Asegúrate de que el archivo exista y sea un Sprite (no Texture2D)");
         }
         else
         {
@@ -151,6 +149,7 @@ public class InventoryManager : MonoBehaviour
 
         string userId = AuthManager.user.UserId;
 
+        // Usar itemId único para cada objeto
         DocumentReference itemRef = db
             .Collection("Usuarios")
             .Document(userId)
@@ -172,7 +171,7 @@ public class InventoryManager : MonoBehaviour
             }
             else
             {
-                Debug.Log($"☁️ Item '{nombre}' guardado en Firestore");
+                Debug.Log($"☁️ Item '{nombre}' (ID: {itemId}) guardado en Firestore");
             }
         });
     }
@@ -194,6 +193,7 @@ public class InventoryManager : MonoBehaviour
         Debug.Log("✅ Todos los items pendientes fueron procesados");
     }
 
+    // ✅ Consumir por índice (ya existía)
     public void UsarItem(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= items.Count)
@@ -225,6 +225,20 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    // ✅ Nuevo: consumir item por nombre
+    public bool UsarItemPorNombre(string nombreItem)
+    {
+        int slotIndex = BuscarItemPorNombre(nombreItem);
+        if (slotIndex == -1)
+        {
+            Debug.LogWarning($"⚠️ No se encontró ningún item con nombre: {nombreItem}");
+            return false;
+        }
+
+        UsarItem(slotIndex); // reutiliza la lógica existente
+        return true;
+    }
+
     void RemoveItemFromFirestore(string itemId)
     {
         if (!AuthManager.IsReady()) return;
@@ -254,6 +268,18 @@ public class InventoryManager : MonoBehaviour
     public List<InventoryItem> GetItems()
     {
         return items;
+    }
+
+    // Verificar si tiene un item por nombre
+    public bool TieneItem(string nombreItem)
+    {
+        return items.Exists(item => item.nombre == nombreItem);
+    }
+
+    // Buscar el índice de un item por nombre
+    public int BuscarItemPorNombre(string nombreItem)
+    {
+        return items.FindIndex(item => item.nombre == nombreItem);
     }
 
     // Método para debug
