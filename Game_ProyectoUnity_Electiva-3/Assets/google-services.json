@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "998054047265",
+    "project_id": "scapeforestfirebaseunity",
+    "storage_bucket": "scapeforestfirebaseunity.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:998054047265:android:5551b80f3aa82ad4d3bd60",
+        "android_client_info": {
+          "package_name": "com.debuggers.juegounity"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCE49ZdZDm7Bml-rogt8XZm8-mAAEyuWAI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
