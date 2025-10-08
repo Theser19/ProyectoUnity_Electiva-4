@@ -1,188 +1,147 @@
-﻿using Firebase.Firestore;
-using System;
-using System.Collections.Generic;
+﻿using UnityEngine;
 using TMPro;
-using UnityEngine;
+using Firebase.Firestore;
+using Firebase.Auth;
+using System.Threading.Tasks;
+using UnityEngine.SceneManagement;
 
 public class GameTimer : MonoBehaviour
 {
-    [Header("UI")]
-    public TextMeshProUGUI textoTiempo;
+    public static GameTimer Instance;
 
-    private float tiempoTranscurrido = 0f;
-    private bool timerActivo = false;
+    [Header("Timer Settings")]
+    public float currentTime = 0f;
+    public bool isRunning = false;
+
+    [Header("UI Elements")]
+    public TMP_Text timerText;
+
     private FirebaseFirestore db;
+    private FirebaseAuth auth;
+
+    void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+
+        db = FirebaseFirestore.DefaultInstance;
+        auth = FirebaseAuth.DefaultInstance;
+    }
 
     void Start()
     {
-        db = FirebaseFirestore.DefaultInstance;
-
-        // Esperar a que el usuario esté autenticado antes de iniciar
-        AuthManager.OnAuthCompleted += IniciarTimer;
-
-        if (AuthManager.IsReady())
-        {
-            IniciarTimer();
-        }
-    }
-
-    void OnDestroy()
-    {
-        AuthManager.OnAuthCompleted -= IniciarTimer;
-    }
-
-    void IniciarTimer()
-    {
-        timerActivo = true;
-        tiempoTranscurrido = 0f;
-        Debug.Log("⏱️ Cronómetro iniciado");
+        currentTime = 0f;
+        isRunning = true;
+        UpdateTimerUI();
     }
 
     void Update()
     {
-        if (timerActivo)
+        if (isRunning)
         {
-            tiempoTranscurrido += Time.deltaTime;
-            ActualizarUI();
+            currentTime += Time.deltaTime;
+            UpdateTimerUI();
         }
     }
 
-    void ActualizarUI()
+    void UpdateTimerUI()
     {
-        if (textoTiempo == null) return;
-
-        TimeSpan timeSpan = TimeSpan.FromSeconds(tiempoTranscurrido);
-        textoTiempo.text = string.Format("{0:D2}:{1:D2}:{2:D2}",
-            timeSpan.Hours,
-            timeSpan.Minutes,
-            timeSpan.Seconds);
+        if (timerText != null)
+            timerText.text = GetFormattedTime();
     }
 
-    public void DetenerYGuardar()
+    public string GetFormattedTime()
     {
-        if (!timerActivo) return;
-
-        timerActivo = false;
-        Debug.Log($"⏱️ Tiempo final: {tiempoTranscurrido} segundos");
-
-        GuardarTiempoEnFirebase();
+        int minutes = Mathf.FloorToInt(currentTime / 60);
+        int seconds = Mathf.FloorToInt(currentTime % 60);
+        return string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
-    async void GuardarTiempoEnFirebase()
+    // 🔹 Llamar este método cuando el jugador gane
+    public async void DetenerYGuardarVictoria()
     {
+        isRunning = false;
+
         if (!AuthManager.IsReady())
         {
-            Debug.LogError("Usuario no autenticado. No se puede guardar el tiempo.");
+            Debug.LogWarning("⚠️ Usuario no autenticado, no se guardará la victoria");
             return;
         }
 
         string userId = AuthManager.user.UserId;
 
-        // Formatear tiempo para legibilidad
-        TimeSpan timeSpan = TimeSpan.FromSeconds(tiempoTranscurrido);
-        string tiempoFormateado = string.Format("{0:D2}:{1:D2}:{2:D2}",
-            timeSpan.Hours,
-            timeSpan.Minutes,
-            timeSpan.Seconds);
+        // 🔹 Congelamos los valores finales del tiempo
+        float finalTime = currentTime;
+        string formattedFinal = GetFormattedTime();
+
+        // 🔹 Guardamos en GameData también
+        GameData.finalTime = finalTime;
+        GameData.formattedTime = formattedFinal;
+
+        Debug.Log($"✅ Tiempo final guardado: {formattedFinal}");
 
         try
         {
-            DocumentReference partidaRef = db
+            // Referencias a Firestore
+            CollectionReference victoriasRef = db
                 .Collection("Usuarios")
                 .Document(userId)
-                .Collection("Partidas")
-                .Document();
+                .Collection("Victorias");
 
-            await partidaRef.SetAsync(new
+            // 🔸 1. Guardar registro normal de victoria
+            await victoriasRef.AddAsync(new
             {
-                tiempoSegundos = tiempoTranscurrido,
-                tiempoFormateado = tiempoFormateado,
-                fechaCompletado = FieldValue.ServerTimestamp,
-                completado = true
+                tiempoSegundos = finalTime,
+                tiempoFormateado = formattedFinal,
+                fecha = FieldValue.ServerTimestamp,
+                causa = "victoria"
             });
 
-            Debug.Log($"☁️ Tiempo guardado en Firebase: {tiempoFormateado}");
+            Debug.Log($"✅ Victoria guardada correctamente: {formattedFinal}");
 
-            // También guardar el mejor tiempo del usuario
-            await ActualizarMejorTiempo(userId, tiempoTranscurrido, tiempoFormateado);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Error al guardar tiempo: {e.Message}");
-        }
-    }
+            // 🔸 2. Guardar o actualizar documento “best”
+            DocumentReference bestRef = victoriasRef.Document("best");
+            DocumentSnapshot bestSnap = await bestRef.GetSnapshotAsync();
 
-    async System.Threading.Tasks.Task ActualizarMejorTiempo(string userId, float tiempoActual, string tiempoFormateado)
-    {
-        try
-        {
-            DocumentReference userRef = db.Collection("Usuarios").Document(userId);
-            DocumentSnapshot snapshot = await userRef.GetSnapshotAsync();
-
-            if (snapshot.Exists)
+            if (bestSnap.Exists)
             {
-                // Verificar si tiene un mejor tiempo previo
-                if (snapshot.TryGetValue("mejorTiempo", out float mejorTiempoPrevio))
-                {
-                    if (tiempoActual < mejorTiempoPrevio)
-                    {
-                        // Nuevo récord personal
-                        await userRef.UpdateAsync(new Dictionary<string, object>
-                        {
-                            { "mejorTiempo", tiempoActual },
-                            { "mejorTiempoFormateado", tiempoFormateado },
-                            { "fechaMejorTiempo", FieldValue.ServerTimestamp }
-                        });
+                // Si ya existe un mejor tiempo, comparamos
+                float bestTime = bestSnap.ContainsField("bestTime") ? bestSnap.GetValue<float>("bestTime") : float.MaxValue;
 
-                        Debug.Log($"🏆 ¡Nuevo récord personal! {tiempoFormateado}");
-                    }
+                if (finalTime < bestTime)
+                {
+                    await bestRef.SetAsync(new
+                    {
+                        bestTime = finalTime,
+                        bestFormatted = formattedFinal
+                    });
+                    Debug.Log($"🏆 Nuevo mejor tiempo actualizado: {formattedFinal}");
                 }
                 else
                 {
-                    // Primera vez que completa el juego
-                    await userRef.UpdateAsync(new Dictionary<string, object>
-                    {
-                        { "mejorTiempo", tiempoActual },
-                        { "mejorTiempoFormateado", tiempoFormateado },
-                        { "fechaMejorTiempo", FieldValue.ServerTimestamp }
-                    });
-
-                    Debug.Log($"🎉 Primera vez completado: {tiempoFormateado}");
+                    Debug.Log("⏱ No se superó el mejor tiempo anterior");
                 }
             }
             else
             {
-                // Crear documento de usuario
-                await userRef.SetAsync(new
+                // Si no existe, lo creamos
+                await bestRef.SetAsync(new
                 {
-                    mejorTiempo = tiempoActual,
-                    mejorTiempoFormateado = tiempoFormateado,
-                    fechaMejorTiempo = FieldValue.ServerTimestamp
+                    bestTime = finalTime,
+                    bestFormatted = formattedFinal
                 });
+                Debug.Log($"🏁 Primer mejor tiempo guardado: {formattedFinal}");
             }
+
+            // 🔹 Cambiar a la escena Victory
+            SceneManager.LoadScene(3);
         }
-        catch (Exception e)
+        catch (System.Exception e)
         {
-            Debug.LogError($"Error al actualizar mejor tiempo: {e.Message}");
+            Debug.LogError($"❌ Error al guardar victoria: {e.Message}");
         }
     }
 
-    public float GetTiempoActual()
-    {
-        return tiempoTranscurrido;
-    }
-
-    public string GetTiempoFormateado()
-    {
-        TimeSpan timeSpan = TimeSpan.FromSeconds(tiempoTranscurrido);
-        return string.Format("{0:D2}:{1:D2}:{2:D2}",
-            timeSpan.Hours,
-            timeSpan.Minutes,
-            timeSpan.Seconds);
-    }
-
-    public bool EstaActivo()
-    {
-        return timerActivo;
-    }
 }

@@ -1,30 +1,41 @@
 ﻿using UnityEngine;
-using TMPro; // Para usar TextMeshPro
+using UnityEngine.SceneManagement;
+using TMPro;
+using System.Collections;
+using Firebase.Firestore;
 
 public class CarRepairSystem : MonoBehaviour
 {
     [Header("Configuración")]
     public int llantasNecesarias = 4;
     private int llantasColocadas = 0;
-    private bool carroReparado = false; // estado del carro
+    private bool carroReparado = false;
 
     [Header("Referencias de Modelos")]
-    public GameObject carroDanado;          // modelo inicial
-    public GameObject carroReparadoPrefab;  // modelo final (renombrado para evitar ambigüedad)
-    public Transform spawnPoint;            // opcional si prefieres instanciar
+    public GameObject carroDanado;
+    public GameObject carroReparadoPrefab;
+    public Transform spawnPoint;
 
     [Header("UI")]
-    public TextMeshProUGUI textoProgreso;   // texto del progreso
+    public TextMeshProUGUI textoProgreso;
 
     [Header("Feedback")]
     public AudioSource sonidoReparacion;
     public AudioSource sonidoCompleto;
 
+    [Header("Cambio de Escena")]
+    public string nombreEscenaVictoria = "Victoria";
+    public float tiempoEspera = 3f; // tiempo de espera antes de cargar escena
+
+    // 🔥 Firebase
+    private FirebaseFirestore db;
+
     private void Start()
     {
+        db = FirebaseFirestore.DefaultInstance;
+
         ActualizarProgresoUI();
 
-        // aseguramos que el carro reparado inicie oculto
         if (carroReparadoPrefab != null)
             carroReparadoPrefab.SetActive(false);
     }
@@ -33,7 +44,7 @@ public class CarRepairSystem : MonoBehaviour
     {
         if (other.CompareTag("Player") && !carroReparado)
         {
-            Debug.Log("🚗 Jugador entró a la zona de reparación del carro.");
+            Debug.Log("Jugador entró a la zona de reparación del carro.");
             IntentarReparar();
         }
     }
@@ -42,7 +53,7 @@ public class CarRepairSystem : MonoBehaviour
     {
         if (!InventoryManager.Instance.TieneItem("Llanta"))
         {
-            Debug.LogWarning("⚠️ No tienes llantas en el inventario.");
+            Debug.LogWarning("No tienes llantas en el inventario.");
             return;
         }
 
@@ -51,7 +62,7 @@ public class CarRepairSystem : MonoBehaviour
         if (consumida)
         {
             llantasColocadas++;
-            Debug.Log($"🔧 Llantas colocadas: {llantasColocadas}/{llantasNecesarias}");
+            Debug.Log($"Llantas colocadas: {llantasColocadas}/{llantasNecesarias}");
 
             if (sonidoReparacion != null)
                 sonidoReparacion.Play();
@@ -68,27 +79,42 @@ public class CarRepairSystem : MonoBehaviour
     void RepararCarro()
     {
         carroReparado = true;
-        Debug.Log("✅ Carro completamente reparado.");
+        Debug.Log("Carro completamente reparado.");
 
-        // ocultar carro dañado y mostrar reparado
+        // Ocultar carro dañado y mostrar reparado
         if (carroDanado != null)
             carroDanado.SetActive(false);
 
         if (carroReparadoPrefab != null)
             carroReparadoPrefab.SetActive(true);
 
-        // si prefieres instanciar en vez de activar:
-        /*
-        if (carroReparadoPrefab != null && spawnPoint != null)
-        {
-            Instantiate(carroReparadoPrefab, spawnPoint.position, spawnPoint.rotation);
-        }
-        */
-
         if (sonidoCompleto != null)
             sonidoCompleto.Play();
 
         ActualizarProgresoUI();
+
+        // OBTENER REFERENCIA AL TIMER ANTES DE LA COROUTINE
+        GameTimer timer = Object.FindFirstObjectByType<GameTimer>();
+        StartCoroutine(GuardarYCambiarEscena(timer));
+    }
+
+    IEnumerator GuardarYCambiarEscena(GameTimer timer)
+    {
+        if (timer != null)
+        {
+            Debug.Log("Deteniendo timer y guardando victoria en Firebase...");
+            timer.DetenerYGuardarVictoria();
+        }
+        else
+        {
+            Debug.LogError("GameTimer no encontrado!");
+        }
+
+        Debug.Log($"Esperando {tiempoEspera} segundos para completar guardado...");
+        yield return new WaitForSeconds(tiempoEspera);
+
+        Debug.Log($"Cargando escena: {nombreEscenaVictoria}");
+        SceneManager.LoadScene(nombreEscenaVictoria);
     }
 
     void ActualizarProgresoUI()
@@ -98,7 +124,7 @@ public class CarRepairSystem : MonoBehaviour
             if (!carroReparado)
                 textoProgreso.text = $"Llantas instaladas: {llantasColocadas}/{llantasNecesarias}";
             else
-                textoProgreso.text = "✅ Carro Reparado";
+                textoProgreso.text = "Carro Reparado! Escapando...";
         }
     }
 }

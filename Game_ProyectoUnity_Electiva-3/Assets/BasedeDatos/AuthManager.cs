@@ -28,44 +28,65 @@ public class AuthManager : MonoBehaviour
 
     void Start()
     {
-        Debug.Log("🔐 Iniciando autenticación anónima...");
-        SignInAnonymously();
+        // Esperar a que Firebase esté listo antes de autenticar
+        if (FirebaseInit.IsReady())
+        {
+            Debug.Log("🔥 Firebase ya estaba listo, iniciando autenticación...");
+            InitializeAuth();
+        }
+        else
+        {
+            Debug.Log("⏳ Esperando a que Firebase termine de inicializarse...");
+            FirebaseInit.OnFirebaseReady += InitializeAuth;
+        }
     }
 
-    void SignInAnonymously()
+    private void InitializeAuth()
+    {
+        FirebaseInit.OnFirebaseReady -= InitializeAuth; // evitar múltiples suscripciones
+        FirebaseAuth auth = FirebaseAuth.DefaultInstance;
+
+        if (auth.CurrentUser != null)
+        {
+            user = auth.CurrentUser;
+            isAuthenticated = true;
+
+            Debug.Log("✅ Usuario existente detectado.");
+            Debug.Log($"   Email: {user.Email}");
+            Debug.Log($"   UserID: {user.UserId}");
+            Debug.Log($"   IsAnonymous: {user.IsAnonymous}");
+
+            OnAuthCompleted?.Invoke();
+        }
+        else
+        {
+            Debug.Log("⚠️ No hay usuario logueado, iniciando sesión anónima...");
+            SignInAnonymously();
+        }
+    }
+
+    private void SignInAnonymously()
     {
         FirebaseAuth.DefaultInstance.SignInAnonymouslyAsync().ContinueWith(task =>
         {
-            if (task.IsCanceled)
-            {
-                Debug.LogError("❌ Autenticación anónima cancelada");
-                // Reintentar después de 2 segundos
-                Invoke(nameof(SignInAnonymously), 2f);
-                return;
-            }
-
-            if (task.IsFaulted)
+            if (task.IsCanceled || task.IsFaulted)
             {
                 Debug.LogError("❌ Error en autenticación anónima: " + task.Exception);
-                // Reintentar después de 2 segundos
                 Invoke(nameof(SignInAnonymously), 2f);
                 return;
             }
 
-            // Autenticación exitosa
-            AuthManager.user = task.Result.User;
-            AuthManager.isAuthenticated = true;
+            user = task.Result.User;
+            isAuthenticated = true;
 
             Debug.Log("✅ Usuario anónimo autenticado exitosamente");
-            Debug.Log($"   UserID: {AuthManager.user.UserId}");
-            Debug.Log($"   IsAnonymous: {AuthManager.user.IsAnonymous}");
+            Debug.Log($"   UserID: {user.UserId}");
+            Debug.Log($"   IsAnonymous: {user.IsAnonymous}");
 
-            // Notificar a todos los sistemas que la autenticación está lista
             OnAuthCompleted?.Invoke();
         });
     }
 
-    // Método público para verificar si está listo
     public static bool IsReady()
     {
         return isAuthenticated && user != null;
@@ -74,8 +95,6 @@ public class AuthManager : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this)
-        {
             Instance = null;
-        }
     }
 }

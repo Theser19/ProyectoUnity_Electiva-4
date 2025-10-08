@@ -1,20 +1,26 @@
 ﻿using Firebase;
+using Firebase.Auth;
+using Firebase.Database;
 using Firebase.Extensions;
 using UnityEngine;
 using System;
 
 public class FirebaseInit : MonoBehaviour
 {
-    public static bool isInitialized = false;
+    public static FirebaseApp App;
+    public static FirebaseAuth Auth;
+    public static FirebaseDatabase Database;
+
+    public static bool IsInitialized = false;
     public static event Action OnFirebaseReady;
 
     [Header("Configuración")]
-    [Tooltip("URL de tu base de datos de Firebase")]
+    [Tooltip("URL de tu base de datos de Firebase (Realtime Database)")]
     public string databaseUrl = "https://scapeforestfirebaseunity-default-rtdb.firebaseio.com";
 
     private void Awake()
     {
-        // Asegurar que Firebase se inicialice primero
+        // Asegurar que Firebase se inicialice primero y no se destruya entre escenas
         DontDestroyOnLoad(gameObject);
     }
 
@@ -28,16 +34,17 @@ public class FirebaseInit : MonoBehaviour
     {
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
         {
-            DependencyStatus dependencyStatus = task.Result;
+            var dependencyStatus = task.Result;
 
             if (dependencyStatus == DependencyStatus.Available)
             {
-                FirebaseApp app = FirebaseApp.DefaultInstance;
+                App = FirebaseApp.DefaultInstance;
 
                 // Configurar la URL de la base de datos
                 if (!string.IsNullOrEmpty(databaseUrl))
                 {
-                    app.Options.DatabaseUrl = new Uri(databaseUrl);
+                    App.Options.DatabaseUrl = new Uri(databaseUrl);
+                    Database = FirebaseDatabase.GetInstance(App, databaseUrl);
                     Debug.Log($"✅ Firebase inicializado con DatabaseURL: {databaseUrl}");
                 }
                 else
@@ -45,7 +52,8 @@ public class FirebaseInit : MonoBehaviour
                     Debug.LogWarning("⚠️ Firebase inicializado sin DatabaseURL");
                 }
 
-                isInitialized = true;
+                Auth = FirebaseAuth.DefaultInstance;
+                IsInitialized = true;
 
                 // Notificar que Firebase está listo
                 OnFirebaseReady?.Invoke();
@@ -65,6 +73,6 @@ public class FirebaseInit : MonoBehaviour
 
     public static bool IsReady()
     {
-        return isInitialized;
+        return IsInitialized;
     }
 }
