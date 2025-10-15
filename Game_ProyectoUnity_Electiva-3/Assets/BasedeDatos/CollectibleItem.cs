@@ -12,40 +12,26 @@ public class CollectibleItem : MonoBehaviour
 
     private void Start()
     {
-        // Asegurar que el collider es un trigger
         Collider col = GetComponent<Collider>();
         col.isTrigger = true;
 
-        // Validar que los campos estén completos
         if (string.IsNullOrEmpty(itemId))
-        {
             Debug.LogError($"❌ {gameObject.name}: itemId está vacío");
-        }
         if (string.IsNullOrEmpty(nombre))
-        {
             Debug.LogError($"❌ {gameObject.name}: nombre está vacío");
-        }
         if (string.IsNullOrEmpty(imagen))
-        {
             Debug.LogError($"❌ {gameObject.name}: imagen está vacío");
-        }
 
         Debug.Log($"📦 CollectibleItem '{nombre}' listo para recoger (ID: {itemId}, Imagen: {imagen})");
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Evitar recolección múltiple
         if (collected)
-        {
             return;
-        }
 
-        // Detectar si el jugador recogió el objeto
         if (other.CompareTag("Player"))
         {
-            collected = true; // Marcar INMEDIATAMENTE
-
             Debug.Log($"🎯 Jugador tocó: {nombre} (ID: {itemId})");
 
             if (InventoryManager.Instance == null)
@@ -54,22 +40,23 @@ public class CollectibleItem : MonoBehaviour
                 return;
             }
 
+            // 🔹 Intentar agregar al inventario
             bool added = InventoryManager.Instance.AgregarItem(itemId, nombre, imagen);
 
             if (added)
             {
+                collected = true; // ✅ Solo marcar si realmente se agregó
                 Debug.Log($"✅ {nombre} recogido correctamente");
                 Destroy(gameObject);
             }
             else
             {
-                Debug.LogWarning($"⚠️ No se pudo agregar {nombre} al inventario");
-                // NO destruir el objeto si no se pudo agregar
+                Debug.LogWarning($"⚠️ Inventario lleno, no se pudo recoger {nombre}. Esperando espacio...");
+                // ❌ NO marcar como 'collected' para permitir reintentar después
             }
         }
     }
 
-    // Para debugging: mostrar el área de recolección
     private void OnDrawGizmos()
     {
         Collider col = GetComponent<Collider>();

@@ -107,7 +107,6 @@ public class GameTimer : MonoBehaviour
 
             if (bestSnap.Exists)
             {
-                // Si ya existe un mejor tiempo, comparamos
                 float bestTime = bestSnap.ContainsField("bestTime") ? bestSnap.GetValue<float>("bestTime") : float.MaxValue;
 
                 if (finalTime < bestTime)
@@ -126,7 +125,6 @@ public class GameTimer : MonoBehaviour
             }
             else
             {
-                // Si no existe, lo creamos
                 await bestRef.SetAsync(new
                 {
                     bestTime = finalTime,
@@ -135,13 +133,15 @@ public class GameTimer : MonoBehaviour
                 Debug.Log($"🏁 Primer mejor tiempo guardado: {formattedFinal}");
             }
 
-            // 🔹 Cambiar a la escena Victory
-            SceneManager.LoadScene(3);
+            // 🔹 Esperar 5 segundos antes de cambiar de escena
+            Debug.Log("⏳ Esperando 5 segundos antes de cargar la escena final...");
+            await Task.Delay(5000);
+
+            SceneManager.LoadScene(3); // Cambiar a la escena de Victoria
         }
         catch (System.Exception e)
         {
             Debug.LogError($"❌ Error al guardar victoria: {e.Message}");
         }
     }
-
 }
