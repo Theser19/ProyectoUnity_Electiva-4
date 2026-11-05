@@ -97,3 +97,12 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Firebase config (contiene la API key del proyecto; no se versiona)
+google-services.json
+google-services.json.meta
+google-services-desktop.json
+google-services-desktop.json.meta
+google-services.xml
+GoogleService-Info.plist
+GoogleService-Info.plist.meta
